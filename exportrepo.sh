@@ -1,11 +1,11 @@
 #!/bin/bash
 #############################################################
 #       Script Export/Import/View Repo Packet Folder        #
-#                      ver:2.0.0.1                          #
+#                      ver:2.0.0.2                          #
 #                 Author: Nabokov G.V.                      #
 #############################################################
 #                                                           #
-#                 Data pruf: 31.12.2020                     #
+#                 Data pruf: 21.01.2021                     #
 #############################################################
 x=0
 LOGIN=false
@@ -39,12 +39,15 @@ function helpfunc()
     echo "     sudo docker - download docker images"
     echo "     sudo yum    - view repos yum"
     echo "     sudo chown  - update perm file tar docker"
+    echo "     sudo cp     - update nuget.exe"
     echo "Dependence:"
     echo "          packet: curl,docker-ce,tar, jq - sudo yum install curl docker-ce tar jq pip pip3 yum-utils"
     echo "          python: twine - pip3 install --user twine"
     echo "            helm: install guide:" 
     echo "                               download packet "$downloadfile$helmpacket
     echo "                               tar unpack, copy file helm to /usr/local/bin/"
+    echo "           nuget: nuget - sudo yum install nuget"
+    echo "                               sudo cp nuget.exe /usr/lib/mono/nuget/NuGet.exe"
     echo "Args:"    
     echo "  --packet - folder packet. Default:"
     echo "                                 yum: "$defaultyumpacket
@@ -75,7 +78,7 @@ function helpfunc()
     echo "YUM    REPO: /etc/yum.repos.d/"
     echo "PIP    REPO: /etc/pip.conf - global, ~/.pypirc - Cred Repo"
     echo "HELM   REPO: /home/$USER/.config/helm/repositories.yaml"
-    echo "NUGET  REPO: /home/$USER/nuget.config"
+    echo "NUGET  REPO: /home/$USER/.config/NuGet/NuGet.Config"
     echo "DOCKER REPO: /root/.docker/config.json"
     echo "###########################################################################################"
     exit 0
@@ -144,7 +147,7 @@ function export_repo {
   echo "START UPLOAD"
   for FILE in `ls $PACKET -1`
   do
-    if [[ $TYPE = "yum" || $TYPE = "helm" || $TYPE = "nuget" ]] ; then
+    if [[ $TYPE = "yum" || $TYPE = "helm" ]] ; then
       #echo "DOWNLOAD FILE $FILE TO REPO URL $URL"
       if $LOGIN ; then
         LOGINTEXT="--user \"$USERREPO:$PASSREPO\""
@@ -159,6 +162,21 @@ function export_repo {
         result="FILE EXISTS"
       else
         result="ERROR"
+      fi
+    elif [ $TYPE = "nuget" ] ; then
+      if $LOGIN ; then
+        nuget add source $URL -name Nexus -username $USERREPO -password $PASSREPO
+      fi
+      EXECUTE="nuget push -Source Nexus $PACKET/$FILE"
+      out=`eval $EXECUTE`
+	  if [ -n "$(echo "$out" | grep 'Your package was pushed')" ] ; then 
+        result="UPLOAD FILE"
+      else
+        if [ -n "$(echo "$out" | grep 'BadRequest')" ] ; then 
+          result="FILE EXISTS"
+        else
+          result="ERROR"
+        fi
       fi
     elif [ $TYPE = "pip" ] ; then
       if $LOGIN ; then
