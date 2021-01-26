@@ -164,9 +164,6 @@ function export_repo {
         result="ERROR"
       fi
     elif [ $TYPE = "nuget" ] ; then
-      if $LOGIN ; then
-        nuget add source $URL -name Nexus -username $USERREPO -password $PASSREPO
-      fi
       EXECUTE="nuget push -Source Nexus $PACKET/$FILE"
       out=`eval $EXECUTE`
 	  if [ -n "$(echo "$out" | grep 'Your package was pushed')" ] ; then 
@@ -302,6 +299,9 @@ if $LOGIN ; then
       if ! sudo docker login -u $USERREPO --password $PASSREPO $URL ; then
         error_exit "No login docker"
       fi
+    elif [ $TYPE = "nuget" ] ; then
+      rm ~/.config/NuGet/NuGet.Config
+      nuget source add -source $URL -name Nexus -username $USERREPO -password $PASSREPO
     fi
 else
   USERREPO=""
